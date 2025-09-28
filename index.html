@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title> QR Code Generator using Pythin Library</title>
+        <style>
+            body{
+                background-color: #262a2a;
+
+            }
+            *{
+                margin: 0;
+                padding: 0;
+                font-family: 'Courier New', Courier, monospace;
+                box-sizing: border-box;
+
+            }
+            .container{
+                width: 400px;
+                padding: 25px 35px;
+                position: absolute;
+                top: 50%;
+                left:50%;
+                transform: translate(-50%,-50%);
+                background-color: #fff;
+                border-radius: 10px;
+            }
+            .container p{
+                font-weight: 600;
+                font-size: 15px;
+                margin-bottom: 8px;
+            }
+            .container input{
+                width: 100%;
+                height: 50px;
+                border: 1px solid #494;
+                outline:0;
+                padding: 10px;
+                margin: 10px 0 20px;
+                border-radius: 5px;
+            }
+            .container button{
+                width: 100%;
+                height: 50px;
+                background-color: #494eea;
+                color: #fff;
+                border: 0;
+                outline:0;
+                border-radius: 5px;
+                box-shadow:  0 10px 10px rgba(0,0,0,0.1);
+            }
+            #imgbox img{
+                width:100%;
+                padding:10px;
+            }
+            .loading{
+                text-align: center;
+                color: #666;
+                padding: 20px;
+                font-size: 14px;
+
+            }
+            .error{
+                color:red;
+                text-align: center;
+                padding: 10px;
+                font-size: 14px;
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <p>Eneter Your Text Or URL</p>
+            <input type="text" placeholder="text" id ="qrText">
+            <div class="error" id ="error"></div>
+            <div id ="imgbox">
+                <div class="loading" id ="loading" style="display:none"> Generating QRCode......</div>
+                <img src="" alt="Image not generated Yet" id ="imgsrc">
+
+            </div>
+            <button onclick="QrCodegenerator()"> QRCode Gernerator</button>
+            <br><br>
+            <button  onclick ="downloadQR()"id ="downloadbtn" style="display:none;"> Download Qr Code</button>
+        </div>
+        <script>
+            let imgbox = document.getElementById("imgbox");
+            let imgsrc = document.getElementById("imgsrc");
+            let downloadbtn = document.getElementById("downloadbtn");
+            let qrText = document.getElementById("qrText");
+
+            async function QrCodegenerator(){
+                const text = qrText.value.trim();
+                if (text.length ===0){
+                    showError("please EnterSome text or URL");
+                    return;
+                }
+                showLoading(true);
+                hideError();
+
+                try {
+                    const response = await fetch('/generate_qr',{
+                        method: "POST",
+                        headers:{
+                            'Content-Type': 'application/json',
+                        },
+                        body:JSON.stringify({text:text})
+                    });
+                    const data= await response.json();
+                    if(data.success){
+                        imgsrc.src = data.image;
+                        imgbox.style.maxHeight ="300px";
+                        imgsrc.style.display = 'block';
+                        downloadbtn.style.display ='block';
+                    }
+                    else{
+                        showError(data.error || 'Failed to Generate QR code');
+                    }
+                    
+
+                    }catch (error){
+                        showError('Error connecting to server');
+                        console.error('Error:' , error);
+                }finally{
+                    showLoading(false);
+                }
+
+
+            }
+
+            function showLoading(show){
+                const loading = document.getElementById("loading");
+                loading.style.display = show ?'block':'none';
+                if(show){
+                    imgsrc.style.display='none';
+                    imgbox.style.maxHeight = "100px";
+                }
+
+            }
+            function showError(message){
+                const errorDiv = document.getElementById("error");
+                errorDiv.textContent = message;
+                errorDiv.style.display ='block';
+                imgbox.style.maxHeight ='0';
+                downloadbtn.style.display ='none';
+            }
+            function hideError(){
+                const errorDiv = document.getElementById("error");
+                errorDiv.style.display ='none';
+            }
+            function downloadQR(){
+                if(imgsrc.src){
+                    const link = document.createElement('a');
+                    link.download =`qrcode-${qrText.value.substring(0, 20)}.png`;
+                    link.href = imgsrc.src;
+                    document.body.appendChild(link);
+                    link.click()
+                    document.body.removeChild(link);
+                }
+            }
+            qrText.addEventListener('keypress',function(e){
+                if(e.key ==='Enter'){
+                    QrCodegenerator();
+                }
+            });
+
+            
+        </script>
+    </body>
+</html>
